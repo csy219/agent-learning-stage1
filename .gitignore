@@ -1,4 +1,15 @@
-.env
-__pycache__/
+# 虚拟环境
 .venv/
+venv/
+
+# python缓存
+__pycache__/
 *.pyc
+
+# vscode配置
+.vscode/
+*.log
+
+#系统文件
+Thumbs.db
+.DS_Store
