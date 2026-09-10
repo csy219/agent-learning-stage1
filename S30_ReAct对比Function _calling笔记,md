@@ -1,0 +1,62 @@
+# S30 ReAct 与 Function Calling 对比
+
+## Function Calling 是什么
+-模型通过接口原生返回结构化的 tool_calls；
+程序直接读 name 和 arguments，不用解析自然语言；
+循环由你的代码控制；
+特点是：格式稳定、可靠、适合生产。
+
+## ReAct 是什么
+- 靠提示词让模型按固定文本格式输出：
+        Thought: 我需要先查时间
+        Action: get_current_time
+        Action Input: {}
+        Observation: 2026-09-10 20:45
+        Thought: 我还需要算加法
+        Action: add
+        Action Input: {"a": 12, "b": 30}
+        Observation: 42
+        Thought: 可以回答了
+        Final Answer: ...
+## 两者区别
+| 维度 | Function Calling | ReAct |
+| --- | --- | --- |
+| 工具调用格式 | 结构化 JSON（tool_calls） | 纯文本（Action/Action Input） |
+| 是否需要解析文本 | 不需要 | 需要，容易出错 |
+| 稳定性 | 高 | 中低 |
+| 依赖 | 模型/接口支持 tools | 只需模型会写字 |
+| 推理过程 | 模型内部，不一定可见 | Thought 明确写出来，可读性好 |
+| 生产推荐 | ✅ 首选 | 主要用于理解原理或特殊场景 |
+## 我的结论
+- S29 用的是 function calling
+
+
+共同点：两者本质都是同一个循环：
+模型思考 → 决定行动 → 执行 → 观察结果 → 再思考 → 直到给出最终答案
+
+
+
+1. ReAct 的三段分别对应 S29 代码里的什么？
+ReAct 概念	S29 代码里的对应
+Thought（思考）	模型决定“要不要调用工具、调用哪个”的内部判断；有时体现在 message.content，如“我来帮您查询时间并计算”
+Action + Action Input	message.tool_calls 里的 function.name + function.arguments
+Observation（观察）	你执行工具后 messages.append({"role": "tool", ...}) 的那条消息
+Final Answer	最后一轮 if not tool_calls: 时返回的 message.content
+
+
+一句话：Thought 是判断，Action 是 tool_calls，Observation 是 role=tool 的结果，Final Answer 是最终 content。
+2. 为什么生产环境更推荐 function calling？
+- 工具调用是结构化 JSON，程序直接用，不需要正则解析文本；
+- 格式由接口保证，模型“写错格式”导致解析失败的概率低得多；
+- 有 tool_call_id，多个工具同时调用也能准确对应结果；
+- 更容易做校验（配合 Pydantic）、错误处理、日志追踪和自动化评测；
+- 是各家模型/框架的通用标准，换模型成本低；
+- 调试时能明确看到“调了什么工具、参数是什么”，而不是从一段自然语言里猜。
+3. 什么情况下 ReAct 反而有用？
+- 模型不支持原生 tool calling，只能靠提示词驱动工具；
+- 你需要看清模型的中间推理过程（教学、调试、研究）；
+- 做原型实验，需要快速试一种自定义循环，不想依赖框架；
+- 某些复杂任务希望模型显式写出 Thought 再做决策（但生产要加严格解析和兜底）。
+反过来说，ReAct 的代价：依赖文本格式 → 容易解析失败；推理过程公开 → 可能泄露敏感信息、也可能“说着玩”不按格式来；工具一多，提示词会变得很长很乱。
+补充一个常见误区
+Function calling 不代表模型“没有思考过程”，它只是不要求把思考写出来。如果你需要推理过程，可以单独让它先输出推理，再调用工具——你现在 S29 的代码就出现过这种情况：模型先说“我来帮您查询时间并计算”，再返回 tool_calls。
