@@ -1,0 +1,26 @@
+{
+  "deepseek-v4-flash|什么是虚拟环境？": {
+    "model": "deepseek-v4-flash",
+    "answer": "虚拟环境是一个独立的运行空间，用来隔离特定项目所需的解释器和依赖库，避免与系统或其他项目冲突。比如 Python 中可用 venv 或 conda 创建，让每个项目拥有自己的包版本。",
+    "elapsed": 2.01,
+    "prompt_tokens": 46,
+    "completion_tokens": 166,
+    "cached": false
+  },
+  "deepseek-v4-flash|什么是 prompt?": {
+    "model": "deepseek-v4-flash",
+    "answer": "Prompt 是输入给 AI 模型的提示或指令，用来引导它生成回答。它可以是问题、描述或示例，写得好坏会影响输出质量。",
+    "elapsed": 1.28,
+    "prompt_tokens": 45,
+    "completion_tokens": 150,
+    "cached": false
+  },
+  "deepseek-v4-pro|请分析为什么 RAG 会产生幻觉，并对比三种优化方案。": {
+    "model": "deepseek-v4-pro",
+    "answer": "RAG产生幻觉主要因检索结果不相关或含噪声，导致生成器基于错误上下文编造内容；优化方案中，重排序能精准过滤噪声但计算开销大，查询改写可提升召回但难以覆盖复杂意图，混合检索兼顾精确与语义但实现复杂度较高。",
+    "elapsed": 3.01,
+    "prompt_tokens": 110,
+    "completion_tokens": 150,
+    "cached": false
+  }
+}
