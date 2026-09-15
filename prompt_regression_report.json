@@ -1,0 +1,134 @@
+{
+"model": "deepseek-v4-flash",
+"versions": [
+{
+"version": "v1",
+"prompt_hash": "fdab76dc",
+"keyword_pass_rate": 1.0,
+"average_score": 5.0,
+"avg_completion_tokens": 185.8,
+"avg_duration": 1.86,
+"rows": [
+{
+"index": 1,
+"question": "什么是 Python 虚拟环境？",
+"keyword_pass": true,
+"score": 5,
+"reason": "回答准确说明了虚拟环境是隔离的独立目录、包含专属解释器与第三方包，能让不同项目使用各自依赖版本避免冲突，并补充了创建方式，覆盖并超出参考答案关键点。",
+"duration": 3.07,
+"completion_tokens": 130
+},
+{
+"index": 2,
+"question": "temperature 设低有什么效果？",
+"keyword_pass": true,
+"score": 5,
+"reason": "回答准确说明低温使输出更确定、稳定，并补充了多样性下降及接近0时结果几乎一致的正确细节。",
+"duration": 1.53,
+"completion_tokens": 188
+},
+{
+"index": 3,
+"question": "tool_call_id 的作用是什么？",
+"keyword_pass": true,
+"score": 5,
+"reason": "准确说明了 tool_call_id 用于唯一标识工具调用，并将工具返回结果与模型的调用申请准确配对，还补充了并行/多次调用时避免错配的作用。",
+"duration": 1.5,
+"completion_tokens": 165
+},
+{
+"index": 4,
+"question": "什么是提示注入？",
+"keyword_pass": true,
+"score": 5,
+"reason": "回答准确解释了提示注入是诱导模型忽略原有指令的攻击方式，并补充直接/间接分类和防御措施，覆盖关键点且无事实错误。",
+"duration": 1.41,
+"completion_tokens": 182
+},
+{
+"index": 5,
+"question": "LangGraph 的 Checkpointer 有什么用？",
+"keyword_pass": true,
+"score": 5,
+"reason": "回答准确覆盖了 Checkpointer 保存图状态、按 thread_id 持久化、恢复/重试/人工介入/时间旅行以及多轮记忆和会话隔离等核心作用，比参考答案更全面。",
+"duration": 1.89,
+"completion_tokens": 258
+},
+{
+"index": 6,
+"question": "缓存能优化什么？",
+"keyword_pass": true,
+"score": 5,
+"reason": "回答全面覆盖缓存优化的核心：复用数据减少重复计算、数据库查询和网络请求，从而提升速度、吞吐、降低延迟与后端负载，并节省带宽，与参考答案“相同请求直接返回、省钱省时间”语义一致。",
+"duration": 1.79,
+"completion_tokens": 192
+}
+]
+},
+{
+"version": "v2",
+"prompt_hash": "9dddcad1",
+"keyword_pass_rate": 0.5,
+"average_score": 5.0,
+"avg_completion_tokens": 316.5,
+"avg_duration": 2.29,
+"rows": [
+{
+"index": 1,
+"question": "什么是 Python 虚拟环境？",
+"keyword_pass": false,
+"score": 5,
+"reason": "回答准确解释了虚拟环境用于隔离不同项目依赖，并补充了创建、安装和激活示例，完全符合参考答案。",
+"duration": 2.04,
+"completion_tokens": 329
+},
+{
+"index": 2,
+"question": "temperature 设低有什么效果？",
+"keyword_pass": false,
+"score": 5,
+"reason": "准确说明低温使输出更确定、稳定、重复性更高并降低随机性，且补充了不保证事实正确等合理边界。",
+"duration": 2.78,
+"completion_tokens": 353
+},
+{
+"index": 3,
+"question": "tool_call_id 的作用是什么？",
+"keyword_pass": true,
+"score": 5,
+"reason": "回答准确指出 tool_call_id 用于将工具返回结果与模型的具体调用申请配对，并附示例说明并发场景，完全覆盖参考答案关键点。",
+"duration": 1.73,
+"completion_tokens": 204
+},
+{
+"index": 4,
+"question": "什么是提示注入？",
+"keyword_pass": true,
+"score": 5,
+"reason": "准确覆盖了参考答案的核心定义（把恶意指令混入输入/上下文以诱导模型忽略原有指令），并补充了示例与防御措施，无事实错误。",
+"duration": 2.62,
+"completion_tokens": 394
+},
+{
+"index": 5,
+"question": "LangGraph 的 Checkpointer 有什么用？",
+"keyword_pass": true,
+"score": 5,
+"reason": "回答完整覆盖保存图状态、恢复与多轮记忆等关键点，并正确补充持久化、人工中断、时间旅行和 SQLite/thread_id 示例，无事实错误。",
+"duration": 2.84,
+"completion_tokens": 385
+},
+{
+"index": 6,
+"question": "缓存能优化什么？",
+"keyword_pass": false,
+"score": 5,
+"reason": "回答准确指出缓存优化访问速度、减少后端负载和带宽消耗，并用浏览器缓存示例说明了相同请求直接返回、节省资源和时间，覆盖参考答案关键点。",
+"duration": 1.74,
+"completion_tokens": 234
+}
+]
+}
+],
+"winner": "v1"
+}
