@@ -1,0 +1,14 @@
+[
+  {
+    "log_id": "50cedc95",
+    "question": "LangGraph 的 memory_saver 参数默认值是多少？",
+    "answer_preview": "我不知道。资料中没有检索到相关内容。",
+    "sources": [],
+    "hit_knowledge": false,
+    "duration": 1.19,
+    "prompt_tokens": 79,
+    "completion_tokens": 102,
+    "feedback": "wrong",
+    "feedback_note": "编造了不存在的参数"
+  }
+]

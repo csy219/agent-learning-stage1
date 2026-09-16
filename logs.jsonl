@@ -1,0 +1,3 @@
+{"log_id": "400af616", "question": "什么是 Python 虚拟环境？", "answer_preview": "根据资料，Python 虚拟环境用于隔离不同项目的依赖。创建虚拟环境的命令是：\n\n```bash\npython -m venv .venv\n```", "sources": ["kb://虚拟环境"], "hit_knowledge": true, "duration": 2.19, "prompt_tokens": 93, "completion_tokens": 118}
+{"log_id": "37b55273", "question": "Checkpointer 有什么用？", "answer_preview": "Checkpointer 用于保存图的状态，并通过 `thread_id` 恢复多轮会话。", "sources": ["kb://Checkpointer"], "hit_knowledge": true, "duration": 1.02, "prompt_tokens": 87, "completion_tokens": 84}
+{"log_id": "50cedc95", "question": "LangGraph 的 memory_saver 参数默认值是多少？", "answer_preview": "我不知道。资料中没有检索到相关内容。", "sources": [], "hit_knowledge": false, "duration": 1.19, "prompt_tokens": 79, "completion_tokens": 102}
