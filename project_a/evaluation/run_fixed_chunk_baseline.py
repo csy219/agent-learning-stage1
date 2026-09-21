@@ -16,6 +16,9 @@ import statistics
 
 import chromadb
 
+
+from chunking import chunk_structure_aware
+
 # __file__：当前脚本自己的路径；
 # Path(__file__)：转成 Path 对象；
 # .resolve()：转成绝对路径并处理 ..；
@@ -38,7 +41,10 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0,str(PROJECT_ROOT))
 from pdf_rag import chunk_text,embed,load_pdf_pages
 
-COLLECTION_NAME="fixed_chunk_baseline"
+COLLECTION_NAME={
+    "fixed":"fixed_chunk_baseline",
+    "structure":"structure_chunk_baseline"
+}
 
 # 定义参数解析函数
 # parse_args 只负责把命令行参数转换成 Python 对象
@@ -67,11 +73,12 @@ def parse_args()->argparse.Namespace:
     parser.add_argument(
         "--output",
         type=Path,
-        default=(
-            Path(__file__).parent
-            / "reports"
-            / "fixed_chunk_baseline.json"
-        ),
+        default=None,
+    )
+    parser.add_argument(
+        "--chunk-mode",
+        choices=["fixed","structure"],
+        default="fixed"
     )
     parser.add_argument("--chunk-size", type=int, default=400)
     parser.add_argument("--overlap", type=int, default=80)
@@ -85,6 +92,7 @@ def parse_args()->argparse.Namespace:
 def index_corpus(
     corpus_dir: Path,
     db_dir: Path,
+    chunk_mode:str,
     chunk_size: int,
     overlap: int,
 ) -> tuple[chromadb.Collection, int]:
@@ -98,12 +106,12 @@ def index_corpus(
     client = chromadb.PersistentClient(path=str(db_dir))
 
     try:
-        client.delete_collection(COLLECTION_NAME)
+        client.delete_collection(COLLECTION_NAME[chunk_mode])
     except (ValueError, chromadb.errors.NotFoundError):
         pass
 
     collection = client.create_collection(
-        name=COLLECTION_NAME,
+        name=COLLECTION_NAME[chunk_mode],
         metadata={"hnsw:space": "cosine"},
     )
 
@@ -115,24 +123,53 @@ def index_corpus(
         metadatas: list[dict[str, Any]] = []
 
         for page_number, page_text in load_pdf_pages(pdf_path):
-            chunks = chunk_text(
-                page_text,
-                size=chunk_size,
-                overlap=overlap,
-            )
+            if chunk_mode=="fixed":
+                chunks=[
+                    {
+                        "text":chunk,
+                        "metadata":{
+                            "source":pdf_path.name,
+                            "page":page_number,
+                            "chunk_index":chunk_index,
+                            "heading":"",
+                            "block_type":"fixed_window",
+                            "block_index":-1
+                        },
+                    }
+                    for chunk_index,chunk in enumerate(
+                        chunk_text(
+                            page_text,
+                            size=chunk_size,
+                         overlap=overlap
+                        )
+                    )
+                ]
+            else:
+                chunks=chunk_structure_aware(
+                    page_text=page_text,
+                    source=pdf_path.name,
+                    page_number=page_number,
+                    max_size=chunk_size,
+                    overlap=overlap
+                )
 
-            for chunk_index, chunk in enumerate(chunks):
+
+            for chunk in chunks:
+                metadata=chunk["metadata"]
                 ids.append(
                     f"{pdf_path.name}"
                     f"#p{page_number}"
-                    f"#c{chunk_index}"
+                    f"#c{metadata['chunk_index']}"
                 )
-                documents.append(chunk)
+                documents.append(chunk["text"])
                 metadatas.append(
                     {
-                        "source": pdf_path.name,
-                        "page": page_number,
-                        "chunk_index": chunk_index,
+                        "source": metadata["source"],
+                        "page": metadata["page"],
+                        "chunk_index": metadata["chunk_index"],
+                        "heading":metadata["heading"],
+                        "block_type":metadata.get("block_type","unknown"),
+                        "block_index":metadata.get("block_index",-1)
                     }
                 )
 
@@ -361,6 +398,7 @@ def main()->int:
     collection,total_chunks=index_corpus(
         corpus_dir=args.corpus,
         db_dir=args.db,
+        chunk_mode=args.chunk_mode,
         chunk_size=args.chunk_size,
         overlap=args.overlap
     )
@@ -385,6 +423,7 @@ def main()->int:
     report={
         # ① config：实验配置区
         "config":{
+            "chunk_mode":args.chunk_mode,
             "chunk_size":args.chunk_size,
             "overlap":args.overlap,
             "candidate_k":args.candidate_k,
@@ -395,7 +434,7 @@ def main()->int:
         },
         # ② index：索引信息区
         "index":{
-            "collection":COLLECTION_NAME,
+            "collection":COLLECTION_NAME[args.chunk_mode],
             "total_chunks":total_chunks,
         },
         # ③ summary：汇总指标区
@@ -404,8 +443,16 @@ def main()->int:
         "rows":rows
     }
 
-    args.output.parent.mkdir(parents=True,exist_ok=True)
-    args.output.write_text(
+    output_path=args.output
+    if output_path is None:
+        output_path=(
+            Path(__file__).parent
+            / "reports"
+            /f"{args.chunk_mode}_chunk_baseline.json"
+        )
+
+    output_path.parent.mkdir(parents=True,exist_ok=True)
+    output_path.write_text(
         json.dumps(report,ensure_ascii=False,indent=2),
         encoding="utf-8"
     )
@@ -413,7 +460,7 @@ def main()->int:
     print("\n===== Fixed Chunk Baseline =====")
     for key,value in summary.items():
         print(f"{key}:{value}")
-    print(f"report: {args.output.resolve()}")
+    print(f"report: {output_path.resolve()}")
 
     return 0
 
