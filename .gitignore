@@ -20,3 +20,16 @@ project_a/uploads/
 project_a/chroma_db/
 project_a/__pycache__/
 project_a/eval_report.json
+
+evaluation/baseline_chroma/
+
+# 忽略所有 Chroma 向量数据库目录（所有 .bin 文件都在里面）
+**/*.chroma/
+
+# 忽略生成的评测报告目录（如果需要保留报告就删掉这行）
+evaluation/reports/
+
+
+# IDE 本地配置
+.vscode/
+.idea/
