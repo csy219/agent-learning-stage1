@@ -19,6 +19,11 @@ import chromadb
 
 from chunking import chunk_structure_aware
 from S05_2_semantic_chunking import chunk_semantic
+from S06_2_parent_child_index import(
+    build_parents_and_children,
+    index_children,
+    write_parent_store
+)
 
 # __file__：当前脚本自己的路径；
 # Path(__file__)：转成 Path 对象；
@@ -45,7 +50,8 @@ from pdf_rag import chunk_text,embed,load_pdf_pages
 COLLECTION_NAME={
     "fixed":"fixed_chunk_baseline",
     "structure":"structure_chunk_baseline",
-    "semantic":"semantic_chunk_baseline"
+    "semantic":"semantic_chunk_baseline",
+    "parent_child":"parent_child_semantic"
 }
 
 # 定义参数解析函数
@@ -79,13 +85,22 @@ def parse_args()->argparse.Namespace:
     )
     parser.add_argument(
         "--chunk-mode",
-        choices=["fixed","structure","semantic"],
+        choices=["fixed","structure","semantic","parent_child"],
         default="fixed"
     )
     parser.add_argument(
         "--semantic-threshold",
         type=float,
         default=0.72
+    )
+    parser.add_argument(
+        "--parent-store",
+        type=Path,
+        default=(
+            Path(__file__).parent
+            / "parent_store"
+            / "S06_2_parent_store.json"
+        ),
     )
     parser.add_argument("--chunk-size", type=int, default=400)
     parser.add_argument("--overlap", type=int, default=80)
@@ -102,14 +117,39 @@ def index_corpus(
     chunk_mode:str,
     chunk_size: int,
     overlap: int,
-    semantic_threshold:float
-) -> tuple[chromadb.Collection, int]:
+    semantic_threshold:float,
+    parent_store_path: Path,
+) -> tuple[chromadb.Collection, int,dict[str,dict[str,Any]]]:
     pdf_paths = sorted(corpus_dir.glob("*.pdf"))
 
     if not pdf_paths:
         raise FileNotFoundError(
             f"corpus 目录中没有 PDF: {corpus_dir}"
         )
+    if chunk_mode == "parent_child":
+        parent_store,children=build_parents_and_children(
+            corpus_dir=corpus_dir,
+            chunk_size=chunk_size,
+            overlap=overlap,
+            semantic_threshold=semantic_threshold
+        ) 
+
+        write_parent_store(
+            parent_store=parent_store,
+            output_path=parent_store_path
+        )
+
+        collection=index_children(
+            children=children,
+            db_dir=db_dir
+        )
+
+        print(
+            f"indexed parent_child: "
+            f"{len(children)} child chunks"
+        )
+
+        return collection, len(children), parent_store
 
     client = chromadb.PersistentClient(path=str(db_dir))
 
@@ -188,7 +228,8 @@ def index_corpus(
                         "block_type":metadata.get("block_type","unknown"),
                         "block_index":metadata.get("block_index",-1),
                         "semantic_group_size":metadata.get("semantic_group_size",1),
-                        "block_indices":metadata.get("block_indices","")
+                        "block_indices":metadata.get("block_indices",""),
+                        # "parent_id":metadata.get("parent_id","")
                     }
                 )
 
@@ -203,10 +244,10 @@ def index_corpus(
 
         print(f"indexed {pdf_path.name}: {len(ids)} chunks")
 
-    return collection, total_chunks
+    return collection, total_chunks,parent_store
         
 
-# 单例检索
+# 检索
 def query_hits(
         collection:chromadb.Collection,
         question:str,
@@ -235,7 +276,8 @@ def query_hits(
                 "page":metadata["page"],
                 "chunk_index":metadata["chunk_index"],
                 "distance":round(float(distance),4),
-                "text":document
+                "text":document,
+                "parent_id":metadata.get("parent_id","")
             }
         )
     return hits,latency_ms
@@ -260,6 +302,59 @@ def expected_ranks(
         ranks.append(rank)
     return ranks
 
+# 新增父块展开函数
+# 这是 **Parent-Child 分层 RAG 架构的「上下文扩展核心函数」**，作用是**把向量检索召回的细粒度子分块（child），向上关联映射到完整的父页面（parent，整页原文），去重后生成完整的上下文，同时输出统计信息，最终用于构建大模型的提示词。**
+def expand_parent_context(
+    hits:list[dict[str,Any]],
+    parent_store:dict[str,dict[str,Any]],
+    limit:int,
+)->dict[str,Any]:
+    # `seen_parents`：集合，用来对父页面去重，避免同一个父页面被重复加入上下文
+    seen_parents:set[str]=set()
+
+    # `parents`：最终输出的父页面列表
+    parents:list[dict[str,Any]]=[]
+
+    # 统计「命中的子分块中，有多少个关联了父页面」，包含重复命中同一个父页面的情况
+    parent_occurrences=0
+
+    for rank,hit in enumerate(hits[:limit],start=1):
+        parent_id=hit.get("parent_id","")
+        if not parent_id:
+            continue
+        parent_occurrences+=1
+
+        if parent_id in seen_parents:
+            continue
+        parent=parent_store.get(parent_id)
+        if not parent:
+            continue
+
+        seen_parents.add(parent_id)
+        text=parent["text"]
+        parents.append(
+            {
+                "parent_id":parent_id,
+                "source":parent["source"],
+                "page":parent["page"],
+                "heading":parent.get("heading",""),
+                "best_child_rank":rank,
+                "char_count":len(text),
+                "estimated_tokens":max(1,len(text)//2),
+            }
+        )
+    return {
+        "parent_occurrences":parent_occurrences,
+        "unique_parent_count":len(parents),
+        "context_chars":sum(
+            parent["char_count"] for parent in parents
+        ),
+        "context_tokens_est": sum(
+            parent["estimated_tokens"] for parent in parents
+        ),
+        "parents":parents
+    }
+    
 
 # `evaluate_case`：单题完整评测主函数，完成「检索→过滤→判分→结构化输出」全流程\
 def evaluate_case(
@@ -267,7 +362,8 @@ def evaluate_case(
         case:dict[str,Any],
         candidate_k:int,
         metric_k:int,
-        threshold:float
+        threshold:float,
+        parent_store:dict[str,dict[str,Any]]
 )->dict[str,Any]:
     hits,latency_ms=query_hits(
         collection=collection,
@@ -308,6 +404,12 @@ def evaluate_case(
     if found_ranks:
         reciprocal_rank=1.0/min(found_ranks)
 
+    parent_context=expand_parent_context(
+        hits=hits,
+        parent_store=parent_store,
+        limit=metric_k
+    )
+
     return {
         "id":case["id"],
         "category":case["category"],
@@ -318,6 +420,7 @@ def evaluate_case(
         "ranks":ranks,
         "reciprocal_rank":round(reciprocal_rank,4),
         "latency_ms":round(latency_ms,2),
+        "parent_context":parent_context,
         "hits":[
             {
                 "source":hit["source"],
@@ -384,6 +487,18 @@ def build_summary(
     )
 
     latencies=[row["latency_ms"] for row in rows]
+    parent_occurrences = [
+        row["parent_context"]["parent_occurrences"] for row in rows
+    ]
+    unique_parents = [
+        row["parent_context"]["unique_parent_count"] for row in rows
+    ]
+    context_chars = [
+        row["parent_context"]["context_chars"] for row in rows
+    ]
+    context_tokens = [
+        row["parent_context"]["context_tokens_est"] for row in rows
+    ]
 
     return {
         "cases":total,
@@ -396,7 +511,20 @@ def build_summary(
         "mrr":round(safe_mean(reciprocal_ranks),4),
         "latency_ms_avg":round(safe_mean(latencies),2),
         "latency_ms_p50":round(statistics.median(latencies),2),
-        "latency_ms_max":round(max(latencies),2)
+        "latency_ms_max":round(max(latencies),2),
+        "parent_occurrences_avg": round(
+            safe_mean(parent_occurrences), 2
+        ),
+        "unique_parents_avg": round(
+            safe_mean(unique_parents), 2
+        ),
+        "context_chars_avg": round(
+            safe_mean(context_chars), 2
+        ),
+        "context_chars_max": max(context_chars),
+        "context_tokens_est_avg": round(
+            safe_mean(context_tokens), 2
+        ),
     }
 
 
@@ -414,13 +542,14 @@ def main()->int:
     if not cases:
         raise ValueError("eval_set.json中没有cases")
     
-    collection,total_chunks=index_corpus(
+    collection,total_chunks,parent_store=index_corpus(
         corpus_dir=args.corpus,
         db_dir=args.db,
         chunk_mode=args.chunk_mode,
         chunk_size=args.chunk_size,
         overlap=args.overlap,
-        semantic_threshold=args.semantic_threshold
+        semantic_threshold=args.semantic_threshold,
+        parent_store_path=args.parent_store,
     )
 
     rows=[
@@ -429,7 +558,8 @@ def main()->int:
             case=case,
             candidate_k=args.candidate_k,
             metric_k=args.metric_k,
-            threshold=args.threshold
+            threshold=args.threshold,
+            parent_store=parent_store
         )
         for case in cases
     ]
@@ -451,7 +581,8 @@ def main()->int:
             "threshold":args.threshold,
             "semantic_threshold":args.semantic_threshold,
             "embeddings_model":"BAAI/bge-small-zh-v1.5",
-            "retrieval":"vector_only"
+            "retrieval":"vector_only",
+            "parent_store": str(args.parent_store.resolve()),
         },
         # ② index：索引信息区
         "index":{
