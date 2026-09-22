@@ -18,6 +18,7 @@ import chromadb
 
 
 from chunking import chunk_structure_aware
+from S05_2_semantic_chunking import chunk_semantic
 
 # __file__：当前脚本自己的路径；
 # Path(__file__)：转成 Path 对象；
@@ -43,7 +44,8 @@ from pdf_rag import chunk_text,embed,load_pdf_pages
 
 COLLECTION_NAME={
     "fixed":"fixed_chunk_baseline",
-    "structure":"structure_chunk_baseline"
+    "structure":"structure_chunk_baseline",
+    "semantic":"semantic_chunk_baseline"
 }
 
 # 定义参数解析函数
@@ -77,8 +79,13 @@ def parse_args()->argparse.Namespace:
     )
     parser.add_argument(
         "--chunk-mode",
-        choices=["fixed","structure"],
+        choices=["fixed","structure","semantic"],
         default="fixed"
+    )
+    parser.add_argument(
+        "--semantic-threshold",
+        type=float,
+        default=0.72
     )
     parser.add_argument("--chunk-size", type=int, default=400)
     parser.add_argument("--overlap", type=int, default=80)
@@ -95,6 +102,7 @@ def index_corpus(
     chunk_mode:str,
     chunk_size: int,
     overlap: int,
+    semantic_threshold:float
 ) -> tuple[chromadb.Collection, int]:
     pdf_paths = sorted(corpus_dir.glob("*.pdf"))
 
@@ -144,13 +152,22 @@ def index_corpus(
                         )
                     )
                 ]
-            else:
+            elif chunk_mode=="structure":
                 chunks=chunk_structure_aware(
                     page_text=page_text,
                     source=pdf_path.name,
                     page_number=page_number,
                     max_size=chunk_size,
                     overlap=overlap
+                )
+            else:
+                chunks=chunk_semantic(
+                    page_text=page_text,
+                    source=pdf_path.name,
+                    page_number=page_number,
+                    max_size=chunk_size,
+                    overlap=overlap,
+                    similarity_threshold=semantic_threshold
                 )
 
 
@@ -169,7 +186,9 @@ def index_corpus(
                         "chunk_index": metadata["chunk_index"],
                         "heading":metadata["heading"],
                         "block_type":metadata.get("block_type","unknown"),
-                        "block_index":metadata.get("block_index",-1)
+                        "block_index":metadata.get("block_index",-1),
+                        "semantic_group_size":metadata.get("semantic_group_size",1),
+                        "block_indices":metadata.get("block_indices","")
                     }
                 )
 
@@ -400,7 +419,8 @@ def main()->int:
         db_dir=args.db,
         chunk_mode=args.chunk_mode,
         chunk_size=args.chunk_size,
-        overlap=args.overlap
+        overlap=args.overlap,
+        semantic_threshold=args.semantic_threshold
     )
 
     rows=[
@@ -429,6 +449,7 @@ def main()->int:
             "candidate_k":args.candidate_k,
             "metric_k":args.metric_k,
             "threshold":args.threshold,
+            "semantic_threshold":args.semantic_threshold,
             "embeddings_model":"BAAI/bge-small-zh-v1.5",
             "retrieval":"vector_only"
         },
