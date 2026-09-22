@@ -22,6 +22,7 @@ project_a/__pycache__/
 project_a/eval_report.json
 
 evaluation/baseline_chroma/
+evaluation/parent_child_chroma/
 
 # 忽略所有 Chroma 向量数据库目录（所有 .bin 文件都在里面）
 **/*.chroma/
@@ -33,3 +34,10 @@ evaluation/reports/
 # IDE 本地配置
 .vscode/
 .idea/
+
+# Chroma 向量数据库目录
+chroma_db/
+chroma_db_*/
+**/*.chroma/
+**/chroma*/
+
