@@ -71,7 +71,7 @@ def fuse_rrf(
 
     for rank,item in enumerate(ordered[:top_k],start=1):
         item["rank"]=rank
-        item["rrf_score"]==round(item["rrf_score"],8)
+        item["rrf_score"]=round(item["rrf_score"],8)
 
     return ordered[:top_k]
 

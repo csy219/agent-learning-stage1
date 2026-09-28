@@ -126,6 +126,7 @@ def index_corpus(
         raise FileNotFoundError(
             f"corpus 目录中没有 PDF: {corpus_dir}"
         )
+    parent_store:dict[str,dict[str,Any]]={}
     if chunk_mode == "parent_child":
         parent_store,children=build_parents_and_children(
             corpus_dir=corpus_dir,
