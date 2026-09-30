@@ -8,7 +8,7 @@ import json
 from dataclasses import asdict, dataclass
 from enum import Enum
 
-from S15_state_reference import RunStatus
+from runtime.S15_state_reference import RunStatus
 
 # 2. 状态转换事件枚举
 class TransitionEvent(str, Enum):

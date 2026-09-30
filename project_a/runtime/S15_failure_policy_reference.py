@@ -8,7 +8,7 @@ import json
 from dataclasses import dataclass,asdict
 from enum import Enum
 
-from S15_state_reference import FailureKind
+from runtime.S15_state_reference import FailureKind
 
 # 2. 故障处理动作枚举
 # 动作枚举	核心含义	对应后续流程

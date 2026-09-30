@@ -8,7 +8,7 @@ from dataclasses import dataclass,field
 # `Protocol` 是核心：用于定义钩子接口契约，实现鸭子类型的抽象 —— 
 # 只要类实现了协议定义的方法，就被视为符合协议，无需显式继承，符合 Python 惯用的解耦设计
 from typing import Any,Protocol
-from S15_state_reference import(
+from runtime.S15_state_reference import(
     FailureKind,
     RunState,
     RunStatus,
