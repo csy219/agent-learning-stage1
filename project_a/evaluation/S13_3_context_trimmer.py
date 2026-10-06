@@ -1,6 +1,6 @@
 import json
 from typing import Any
-from S13_2_context_packer import (
+from evaluation.S13_2_context_packer import (
     detect_conflict,
     estimate_tokens,
     normalize_text,
