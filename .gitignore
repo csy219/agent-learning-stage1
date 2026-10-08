@@ -1,4 +1,4 @@
-# 虚拟环境
+﻿# 虚拟环境
 .venv/
 venv/
 
@@ -41,3 +41,16 @@ chroma_db_*/
 **/*.chroma/
 **/chroma*/
 
+evaluation/baseline.chroma/
+evaluation/baseline_chroma/
+evaluation/parent_child_chroma/
+
+evaluation/baseline.chroma/
+evaluation/baseline_chroma/
+evaluation/parent_child_chroma/
+evaluation/trace_chroma/
+# Project A portfolio artifacts
+project_a/evaluation/baseline_chroma/
+project_a/evaluation/parent_child_chroma/
+project_a/evaluation/trace_chroma/
+project_a/evaluation/baseline.chroma/

@@ -1,125 +1,187 @@
-# PDF 文档知识库问答 Agent
+# Project A - 可服务化 RAG / Agent 应用
 
-基于 RAG + LangGraph 的文档问答系统：上传 PDF，自动解析入库，提问时检索原文并给出带页码引用的回答。
+一个面向企业文档问答的 RAG 应用，覆盖文档索引、混合检索、上下文组装、引用追踪、安全防护、任务持久化和 FastAPI 服务化。
 
-## 功能
+## 核心能力
 
-- PDF 上传与自动索引（按页解析、分块、向量化）
-- 中文语义检索（BGE 向量 + Chroma）
-- LangGraph Agent 自动决定是否调用检索工具
-- 回答带原文引用：[文件名 第X页]
-- 无相关资料时明确拒答，减少幻觉
-- 多轮会话记忆（thread_id）
-- 内置评测脚本，输出检索与回答准确率
+- PDF 上传、解析、分块、向量化和 Chroma 索引
+- fixed / structure / semantic / parent-child 分块消融
+- Vector、BM25、RRF Hybrid 检索
+- Query rewrite、metadata filter、候选池扩展
+- CrossEncoder rerank 实验和回归分析
+- Context packing：去重、来源多样性、token 预算
+- v1/v2 冲突提示与 citation `[C1]` 追踪
+- 直接/间接 Prompt Injection 防护
+- 无证据拒答和伪造 citation 检查
+- PostgreSQL Run 状态、Checkpoint 和跨进程恢复
+- Redis 限流、分布式锁和请求幂等
+- FastAPI 上传、会话、问答、任务查询和 SSE 流式接口
+- 并发压测、p50/p95、上下文 token 和成本统计
 
 ## 架构
 
 ```text
-用户
- ↓ 上传 PDF
-FastAPI /upload
- ↓
-pdf_rag.py：解析 → 分块 → BGE 向量化 → Chroma 入库
- ↓ 提问
-FastAPI /ask
- ↓
-agent.py：LangGraph Agent ⇄ search_knowledge 工具
- ↓
-检索 top-k + 阈值过滤 → 原文片段（带页码）
- ↓
-模型基于原文回答 → answer + citations
+React / Client
+      |
+      v
+FastAPI API Layer
+      |
+      +--> Document Upload / Index
+      |
+      +--> RAG Runtime
+              |
+              +--> Query Rewrite
+              +--> Metadata Filter
+              +--> Vector + BM25 Hybrid
+              +--> Rerank (experimental)
+              +--> Context Packing / Citation
+              |
+              +--> PostgreSQL
+              |     runs
+              |     checkpoints
+              |     tool_calls
+              |     idempotency_keys
+              |
+              +--> Redis
+                    rate limit
+                    distributed lock
 ```
 
-## 技术栈
+## 关键指标
 
-- Python 3.12
-- FastAPI / Uvicorn
-- pypdf
-- sentence-transformers（BAAI/bge-small-zh-v1.5）
-- Chroma
-- LangChain / LangGraph
-- DeepSeek API
-
-## 目录结构
+检索：
 
 ```text
-project_a/
-├── app.py              FastAPI 接口
-├── agent.py            LangGraph Agent
-├── pdf_rag.py          PDF 解析、分块、向量化、检索
-├── eval_project_a.py   评测脚本
-├── requirements.txt    依赖
-├── uploads/            上传目录（不入库 Git）
-└── chroma_db/          向量库（不入库 Git）
+Hit@1              0.9762
+Recall@4           0.9881
+MRR                0.9881
+nDCG@4             0.9763
 ```
 
-## 快速开始
+Context Packing：
 
-```bash
+```text
+46 条 case
+invalid citation   0
+citation recall    1.0
+conflict covered   3/3
+injection covered  2/2
+context tokens avg 451
+context tokens max 851
+```
+
+Rerank：
+
+```text
+修复 E33
+回归 E31/E34
+CPU 延迟明显上升
+默认关闭，仅保留条件触发方向
+```
+
+安全回归：
+
+```text
+5/5 scenarios passed
+```
+
+并发压测：
+
+```text
+requests           20
+concurrency        5
+failed             0
+p50                135.01 ms
+p95                286.89 ms
+context tokens     2400
+all_passed         true
+```
+
+## API
+
+```text
+GET  /health
+GET  /ready
+
+POST /documents/upload
+
+POST /sessions
+POST /ask
+POST /ask/stream
+GET  /tasks/{run_id}
+```
+
+## 本地启动
+
+```powershell
 python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
+.\.venv\Scripts\Activate.ps1
+
+pip install -r project_a\requirements.txt
+pip install -r project_a\requirements-db.txt
+pip install -r project_a\requirements-resilience.txt
 ```
 
-配置 `.env`：
+配置根目录 `.env`：
 
 ```env
-DEEPSEEK_API_KEY=sk-你的key
+DEEPSEEK_API_KEY=your-key
+DATABASE_URL=postgresql+psycopg://agent:agent_password@localhost:5433/agent_runtime
+REDIS_URL=redis://localhost:6380/0
 ```
 
-启动：
+启动 PostgreSQL 和 Redis：
 
-```bash
-uvicorn app:app --port 8000
+```powershell
+cd project_a
+docker compose -f .\docker-compose.db.yml up -d
 ```
 
-## 接口
+应用数据库：
 
-| 方法 | 路径 | 说明 |
-| --- | --- | --- |
-| GET | /health | 健康检查 |
-| POST | /upload | 上传 PDF 并建立索引 |
-| POST | /ask | 提问，返回回答与引用 |
-
-示例：
-
-```bash
-curl.exe -X POST http://127.0.0.1:8000/upload -F "file=@手册.pdf"
-
-curl.exe -X POST http://127.0.0.1:8000/ask \
-  -H "Content-Type: application/json" \
-  -d "{\"question\":\"RAG 的完整流程是什么？\",\"thread_id\":\"user-1\"}"
+```powershell
+.\.venv\Scripts\alembic.exe upgrade head
 ```
 
-返回：
+启动 FastAPI：
 
-```json
-{
-  "answer": "RAG 的完整流程是…… 引用：[手册.pdf 第2页]",
-  "citations": [
-    {"source": "手册.pdf", "page": 2, "distance": 0.31}
-  ]
-}
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn runtime.api.S19_2_app:app --host 127.0.0.1 --port 8000
+```
+
+Swagger：
+
+```text
+http://127.0.0.1:8000/docs
 ```
 
 ## 评测
 
-```bash
-python eval_project_a.py
+RAG Harness：
+
+```powershell
+.\.venv\Scripts\python.exe project_a\evaluation\harness\run_full_suite.py
 ```
 
-输出通过率、检索命中率、回答正确率，明细见 `eval_report.json`。
+安全回归：
+
+```powershell
+cd project_a
+.\.venv\Scripts\python.exe -B -m runtime.security.S18_6_security_regression
+```
+
+并发压测：
+
+```powershell
+cd project_a
+.\.venv\Scripts\python.exe -B -m runtime.api.S19_6_load_test --requests 20 --concurrency 5
+```
 
 ## 已知限制
 
-- 扫描版 PDF 无法提取文字，需要 OCR
-- 目前使用字符窗口分块，后续可改语义分块
-- 未接入 reranker 与混合检索
-- Checkpointer 使用内存存储，生产建议换 PostgreSQL/SQLite
+- Rerank 默认关闭，只保留条件触发研究方向
+- 压测使用 fake ask，未包含真实大模型生成延迟
+- 流式接口当前先得到完整回答再分片，尚未接入底层 token stream
+- 认证、租户隔离和完整权限系统仍待完善
+- Docker 沙箱、Coding Agent 和 RepoFix 属于后续项目
 
-## 后续计划
-
-- 混合检索（BM25 + 向量）
-- Reranker 精排
-- 流式输出（SSE）
-- 评测接入 CI
