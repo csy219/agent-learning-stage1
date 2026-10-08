@@ -4,6 +4,8 @@
 
 一个面向企业文档的可验证 RAG 运行时，覆盖文档索引、混合检索、上下文组装、引用追踪、安全防护、任务持久化和 FastAPI 服务化。
 
+![SourceLedger Workbench](docs/source-ledger-workbench.png)
+
 ## 核心能力
 
 - PDF 上传、解析、分块、向量化和 Chroma 索引
@@ -156,6 +158,29 @@ Swagger：
 ```text
 http://127.0.0.1:8000/docs
 ```
+
+## Workbench 前端
+
+```powershell
+cd project_a\frontend
+
+npm.cmd install
+npm.cmd run dev
+```
+
+前端地址：
+
+```text
+http://127.0.0.1:5173
+```
+
+Workbench 提供：
+
+- PDF 上传与索引状态
+- 标准问答与 SSE 流式问答
+- Citation、来源和页码展示
+- Run 状态和 Checkpoint 信息
+- p50、p95、token、引用召回和 injection 覆盖指标
 
 ## 评测
 
