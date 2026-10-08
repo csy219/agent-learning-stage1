@@ -58,7 +58,7 @@ def main() -> int:
 
     health = HealthResponse(
         status="ok",
-        service="agent-runtime",
+        service="source-ledger",
         version="0.1.0",
     )
 

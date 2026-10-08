@@ -149,7 +149,7 @@ def create_app(
         ask_function:Callable[...,Any] | None=None,
 )->FastAPI:
     app=FastAPI(
-        title="Agent Runtime API",
+        title="SourceLedger API",
         version="0.1.0",
         lifespan=lifespan,
     )
@@ -166,7 +166,7 @@ def create_app(
     # - `@app.get("/health")`：注册 GET 方法的 `/health` 路由；
     # - `response_model=HealthResponse`：指定响应数据模型，FastAPI 会自动做类型校验和 JSON 序列化，同时生成接口文档。
     # - 接口作用：基础存活探测，只要服务进程正常就返回 `ok`，用于监控系统判断服务是否存活。
-    # - 返回内容：状态为 `ok`，服务名 `agent-runtime`，版本号 `0.1.0`。
+    # - 返回内容：状态为 `ok`，服务名 `source-ledger`，版本号 `0.1.0`。
     @app.get(
         "/health",
         response_model=HealthResponse,
@@ -174,7 +174,7 @@ def create_app(
     def health()->HealthResponse:
         return HealthResponse(
             status="ok",
-            service="agent_runtime",
+            service="source-ledger",
             version="0.1.0",
         )
 

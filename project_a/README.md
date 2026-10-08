@@ -1,6 +1,8 @@
-# Project A - 可服务化 RAG / Agent 应用
+# SourceLedger - 可验证的 RAG Runtime
 
-一个面向企业文档问答的 RAG 应用，覆盖文档索引、混合检索、上下文组装、引用追踪、安全防护、任务持久化和 FastAPI 服务化。
+**SourceLedger / 源证**
+
+一个面向企业文档的可验证 RAG 运行时，覆盖文档索引、混合检索、上下文组装、引用追踪、安全防护、任务持久化和 FastAPI 服务化。
 
 ## 核心能力
 
@@ -184,4 +186,3 @@ cd project_a
 - 流式接口当前先得到完整回答再分片，尚未接入底层 token stream
 - 认证、租户隔离和完整权限系统仍待完善
 - Docker 沙箱、Coding Agent 和 RepoFix 属于后续项目
-

@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from agent import ask
 from pdf_rag import UPLOAD_DIR, index_pdf
 
-app = FastAPI(title="PDF Knowledge Base Agent")
+app = FastAPI(title="SourceLedger API")
 
 
 class AskRequest(BaseModel):

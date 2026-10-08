@@ -1,4 +1,4 @@
-# Project A Architecture
+# SourceLedger Architecture
 
 ## 1. Data Ingest
 
@@ -110,4 +110,3 @@ FastAPI
 - PostgreSQL stores durable Run and checkpoint snapshots.
 - Redis stores rate limits and distributed locks.
 - Untrusted retrieved text is never treated as system instructions.
-
