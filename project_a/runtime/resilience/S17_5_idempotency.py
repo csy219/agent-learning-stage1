@@ -219,6 +219,7 @@ class RequestIdempotencyService:
                 key=key,
                 error=str(exc),
             )
+            raise
 
         self.repository.complete(
             key=key,
