@@ -43,6 +43,11 @@ function formatPercent(value: number): string {
   return `${(value * 100).toFixed(2)}%`;
 }
 
+function numberFrom(value: unknown): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 function App() {
   const [apiStatus, setApiStatus] =
     useState<ApiStatus>("checking");
@@ -71,6 +76,14 @@ function App() {
   const [runId, setRunId] = useState("");
   const [task, setTask] =
     useState<TaskStatusResponse | null>(null);
+  const [usage, setUsage] = useState({
+    inputTokens: 0,
+    outputTokens: 0,
+    totalTokens: 0,
+    cacheReadTokens: 0,
+    contextTokens: 0,
+    latencyMs: 0,
+  });
   const [querying, setQuerying] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
@@ -183,6 +196,14 @@ function App() {
     setCitations([]);
     setRunId("");
     setTask(null);
+    setUsage({
+      inputTokens: 0,
+      outputTokens: 0,
+      totalTokens: 0,
+      cacheReadTokens: 0,
+      contextTokens: 0,
+      latencyMs: 0,
+    });
 
     const requestId = crypto.randomUUID();
 
@@ -219,6 +240,29 @@ function App() {
               setRunId(nextRunId);
             }
 
+            if (event.event === "done") {
+              setUsage({
+                inputTokens: numberFrom(
+                  event.data.input_tokens,
+                ),
+                outputTokens: numberFrom(
+                  event.data.output_tokens,
+                ),
+                totalTokens: numberFrom(
+                  event.data.total_tokens,
+                ),
+                cacheReadTokens: numberFrom(
+                  event.data.cache_read_tokens,
+                ),
+                contextTokens: numberFrom(
+                  event.data.context_tokens_est,
+                ),
+                latencyMs: numberFrom(
+                  event.data.latency_ms,
+                ),
+              });
+            }
+
             if (event.event === "error") {
               throw new Error(
                 String(
@@ -244,6 +288,16 @@ function App() {
         setAnswer(response.answer);
         setCitations(response.citations);
         setRunId(response.run_id);
+        setUsage({
+          inputTokens: response.input_tokens,
+          outputTokens: response.output_tokens,
+          totalTokens: response.total_tokens,
+          cacheReadTokens:
+            response.cache_read_tokens,
+          contextTokens:
+            response.context_tokens_est,
+          latencyMs: response.latency_ms,
+        });
         await refreshTask(response.run_id);
       }
     } catch (queryError) {
@@ -500,6 +554,31 @@ function App() {
               </strong>
             </div>
           </div>
+
+          <div className="usage-box">
+            <div>
+              <span>Input</span>
+              <strong>{usage.inputTokens}</strong>
+            </div>
+            <div>
+              <span>Output</span>
+              <strong>{usage.outputTokens}</strong>
+            </div>
+            <div>
+              <span>Total</span>
+              <strong>{usage.totalTokens}</strong>
+            </div>
+            <div>
+              <span>Cache read</span>
+              <strong>{usage.cacheReadTokens}</strong>
+            </div>
+            <div>
+              <span>Latency</span>
+              <strong>
+                {usage.latencyMs.toFixed(0)} ms
+              </strong>
+            </div>
+          </div>
         </aside>
       </main>
 
@@ -609,4 +688,3 @@ function App() {
 }
 
 export default App;
-

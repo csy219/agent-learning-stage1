@@ -161,6 +161,10 @@ class AskResponse(BaseModel):
         default_factory=list
     )
     context_tokens_est:int=0
+    input_tokens:int=0
+    output_tokens:int=0
+    total_tokens:int=0
+    cache_read_tokens:int=0
     latency_ms:float=0.0
     replayed:bool=False
 

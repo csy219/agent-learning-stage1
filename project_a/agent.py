@@ -1,4 +1,5 @@
 import os
+import time
 from typing import Annotated, TypedDict
 
 from dotenv import load_dotenv
@@ -69,6 +70,7 @@ graph = builder.compile(checkpointer=checkpointer)
 
 
 def ask(question: str, thread_id: str = "default") -> dict:
+    started = time.perf_counter()
     config = {"configurable": {"thread_id": thread_id}}
     result = graph.invoke(
         {"messages": [HumanMessage(content=question)]},
@@ -81,4 +83,42 @@ def ask(question: str, thread_id: str = "default") -> dict:
         {"source": h["source"], "page": h["page"], "distance": h["distance"]}
         for h in hits
     ]
-    return {"answer": answer, "citations": citations}
+
+    input_tokens = 0
+    output_tokens = 0
+    total_tokens = 0
+    cache_read_tokens = 0
+
+    for message in result["messages"]:
+        usage = getattr(message, "usage_metadata", None)
+        if not usage:
+            continue
+
+        input_tokens += int(usage.get("input_tokens", 0) or 0)
+        output_tokens += int(usage.get("output_tokens", 0) or 0)
+        total_tokens += int(usage.get("total_tokens", 0) or 0)
+        input_details = usage.get("input_token_details") or {}
+        cache_read_tokens += int(
+            input_details.get("cache_read", 0) or 0
+        )
+
+    fallback_context_tokens = sum(
+        max(1, len(str(hit["text"])) // 2)
+        for hit in hits
+    )
+    latency_ms = (time.perf_counter() - started) * 1000
+
+    return {
+        "answer": answer,
+        "citations": citations,
+        "context_tokens_est": (
+            input_tokens
+            if input_tokens > 0
+            else fallback_context_tokens
+        ),
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
+        "total_tokens": total_tokens,
+        "cache_read_tokens": cache_read_tokens,
+        "latency_ms": round(latency_ms, 2),
+    }

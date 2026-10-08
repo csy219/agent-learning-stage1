@@ -455,6 +455,32 @@ code {
   text-overflow: ellipsis;
 }
 
+.usage-box {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1px;
+  margin: 0 16px 16px;
+  border: 1px solid #d9d8ce;
+  background: #d9d8ce;
+}
+
+.usage-box div {
+  display: grid;
+  gap: 3px;
+  padding: 9px 10px;
+  background: #fffef9;
+}
+
+.usage-box span {
+  color: #737b77;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+}
+
+.usage-box strong {
+  font-size: 0.78rem;
+}
+
 .metrics-strip {
   display: grid;
   grid-template-columns: repeat(8, 1fr);
@@ -554,4 +580,3 @@ code {
     gap: 5px;
   }
 }
-

@@ -45,6 +45,10 @@ export interface AskResponse {
   answer: string;
   citations: Citation[];
   context_tokens_est: number;
+  input_tokens: number;
+  output_tokens: number;
+  total_tokens: number;
+  cache_read_tokens: number;
   latency_ms: number;
   replayed: boolean;
 }
@@ -77,4 +81,3 @@ export interface StandardAskPayload {
   request_id: string;
   stream: false;
 }
-

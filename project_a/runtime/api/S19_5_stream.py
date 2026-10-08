@@ -132,7 +132,13 @@ def stream_events(
             {
                 "run_id":response.run_id,
                 "status":response.status.value,
-                "replayed":response.replayed
+                "replayed":response.replayed,
+                "context_tokens_est":response.context_tokens_est,
+                "input_tokens":response.input_tokens,
+                "output_tokens":response.output_tokens,
+                "total_tokens":response.total_tokens,
+                "cache_read_tokens":response.cache_read_tokens,
+                "latency_ms":response.latency_ms
             }
         )
 

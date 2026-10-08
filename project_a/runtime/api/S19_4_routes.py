@@ -168,6 +168,18 @@ def execute_ask(
             context_tokens_est=int(
                 raw_result.get("context_tokens_est",0)
             ),
+            input_tokens=int(
+                raw_result.get("input_tokens",0)
+            ),
+            output_tokens=int(
+                raw_result.get("output_tokens",0)
+            ),
+            total_tokens=int(
+                raw_result.get("total_tokens",0)
+            ),
+            cache_read_tokens=int(
+                raw_result.get("cache_read_tokens",0)
+            ),
             latency_ms=raw_result.get("latency_ms",0.0),
             replayed=False,
         )
